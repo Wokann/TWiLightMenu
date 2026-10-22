@@ -1,9 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
+#include <unistd.h>
 
 #include "common/dlplayPatch.h"
 #include "common/logging.h"
+#include "common/inifile.h"
+#include "common/systemdetails.h"
+#include "common/twlmenusettings.h"
 
 #define DLPLAY_SIZE 433088
 #define DLPLAY_HEADER_SIZE 0x160 // Up to the header CRC, which differs between versions
@@ -114,4 +119,66 @@ const char* dlplayGetBootPath(const char* srcPath, const char* patchedPath) {
 
 	logPrint("DS Download Play RSA patch: Created %s (%s)\n", patchedPath, dlplayVersions[version].name);
 	return patchedPath;
+}
+
+int dlplayConfigureSlot1(CIniFile& bootstrapini, bool rebootToSystemTitle) {
+	const int mode = ms().dlplaySlot1Mode;
+	if (mode < 0 || mode > 2) {
+		return DLPLAY_VIRTUAL_SLOT1_ROM_MISSING;
+	}
+	if (mode != 0 && rebootToSystemTitle) {
+		return DLPLAY_VIRTUAL_SLOT1_LOCAL_RECEIVER;
+	}
+
+	const std::string& romPath = ms().dlplayVirtualSlot1RomPath;
+	std::string savePath;
+	if (mode == 1 && !romPath.empty()) {
+		const bool onFlashcard = romPath.compare(0, 5, "fat:/") == 0;
+		const size_t slash = romPath.find_last_of('/');
+		const size_t dot = romPath.find_last_of('.');
+		if ((!onFlashcard && romPath.compare(0, 4, "sd:/") != 0)
+		 || slash == std::string::npos || dot == std::string::npos || dot <= slash || dot+1 == romPath.size()
+		 || ms().saveLocation < TWLSettings::ESavesFolder || ms().saveLocation > TWLSettings::ETWLMFolder
+		 || access(romPath.c_str(), R_OK)) {
+			return DLPLAY_VIRTUAL_SLOT1_ROM_MISSING;
+		}
+
+		FILE* file = fopen(romPath.c_str(), "rb");
+		unsigned char header[0x40] = {};
+		const bool valid = file && fread(header, 1, sizeof(header), file) == sizeof(header)
+			&& (header[0x20] | header[0x21] | header[0x22] | header[0x23])
+			&& (header[0x2C] | header[0x2D] | header[0x2E] | header[0x2F]);
+		if (file) fclose(file);
+		if (!valid) return DLPLAY_VIRTUAL_SLOT1_ROM_MISSING;
+
+		const std::string settingsPath = std::string(onFlashcard ? "fat:/" : "sd:/")
+			+ "_nds/TWiLightMenu/gamesettings/" + romPath.substr(slash+1) + ".ini";
+		CIniFile gameSettings(settingsPath);
+		const int saveNo = gameSettings.GetInt("GAMESETTINGS", "SAVE_NUMBER", 0);
+		if (saveNo < 0 || saveNo > 9) return DLPLAY_VIRTUAL_SLOT1_SAVE_MISSING;
+
+		std::string saveName = romPath.substr(slash+1, dot-slash-1) + ".sav";
+		if (saveNo && ms().saveLocation != TWLSettings::EGamesFolder) {
+			saveName += std::to_string(saveNo);
+		}
+		switch (ms().saveLocation) {
+			case TWLSettings::ESavesFolder:
+				savePath = romPath.substr(0, slash+1) + "saves/" + saveName;
+				break;
+			case TWLSettings::EGamesFolder:
+				savePath = romPath.substr(0, slash+1) + saveName;
+				break;
+			case TWLSettings::ETWLMFolder:
+				savePath = std::string(sys().isRunFromSD() ? "sd:/" : "fat:/") + "_nds/TWiLightMenu/saves/" + saveName;
+				break;
+		}
+		if (access(savePath.c_str(), R_OK | W_OK)) {
+			return DLPLAY_VIRTUAL_SLOT1_SAVE_MISSING;
+		}
+	}
+
+	bootstrapini.SetInt("NDS-BOOTSTRAP", "DLP_SLOT1_MODE", mode == 0 ? 0 : 1);
+	bootstrapini.SetString("NDS-BOOTSTRAP", "DLP_VIRTUAL_SLOT1_ROM_PATH", mode == 1 ? romPath : "");
+	bootstrapini.SetString("NDS-BOOTSTRAP", "DLP_VIRTUAL_SLOT1_SAV_PATH", savePath);
+	return 0;
 }

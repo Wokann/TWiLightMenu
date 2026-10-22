@@ -371,6 +371,8 @@ public:
 	bool dsiWareToSD;
 	bool newSnesEmuVer;
 	bool dlplayRsaPatch;
+	int dlplaySlot1Mode; // 0: physical, 1: virtual inserted, 2: virtual empty
+	std::string dlplayVirtualSlot1RomPath;
 	bool esrbRatingScreen;
 
 	int ak_viewMode;

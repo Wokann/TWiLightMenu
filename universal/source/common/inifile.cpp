@@ -224,21 +224,33 @@ bool CIniFile::SaveIniFile(const std::string &FileName)
 		return false;
 	}
 
+	bool success = true;
 	for (size_t ii = 0; ii < m_FileContainer.size(); ii++) {
 		std::string &strline = m_FileContainer[ii];
 		size_t notSpace = strline.find_first_not_of(' ');
 		strline = strline.substr(notSpace);
 		if (strline.find('[') == 0 && ii > 0) {
-			if (!m_FileContainer[ii - 1].empty() && m_FileContainer[ii - 1] != "")
-				fwrite((gbar2Fix ? "\n" : "\r\n"), 1, 2-gbar2Fix, f);
+			if (!m_FileContainer[ii - 1].empty() && m_FileContainer[ii - 1] != ""
+			 && fwrite((gbar2Fix ? "\n" : "\r\n"), 1, 2-gbar2Fix, f) != size_t(2-gbar2Fix)) {
+				success = false;
+				break;
+			}
 		}
 		if (!strline.empty() && strline != "") {
-			fwrite(strline.c_str(), 1, strline.length(), f);
-			fwrite((gbar2Fix ? "\n" : "\r\n"), 1, 2-gbar2Fix, f);
+			if (fwrite(strline.c_str(), 1, strline.length(), f) != strline.length()
+			 || fwrite((gbar2Fix ? "\n" : "\r\n"), 1, 2-gbar2Fix, f) != size_t(2-gbar2Fix)) {
+				success = false;
+				break;
+			}
 		}
 	}
 
-	fclose(f);
+	if (fclose(f) != 0) {
+		success = false;
+	}
+	if (!success) {
+		return false;
+	}
 
 	m_bModified = false;
 

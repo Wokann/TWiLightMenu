@@ -1508,6 +1508,11 @@ int settingsMode(void)
 		}
 	}
 	gamesPage.option(STR_DLPLAY_RSA_PATCH, STR_DESCRIPTION_DLPLAY_RSA_PATCH, Option::Bool(&ms().dlplayRsaPatch), {STR_ON, STR_OFF}, {true, false});
+	if (ms().dlplayVirtualSlot1RomPath.empty()) {
+		gamesPage.option(STR_DLP_SLOT1_MODE, STR_DESCRIPTION_DLP_SLOT1_MODE, Option::Int(&ms().dlplaySlot1Mode), {STR_DLP_SLOT1_PHYSICAL, STR_DLP_VIRTUAL_SLOT1_EMPTY}, {0, 2});
+	} else {
+		gamesPage.option(STR_DLP_SLOT1_MODE, STR_DESCRIPTION_DLP_SLOT1_MODE, Option::Int(&ms().dlplaySlot1Mode), {STR_DLP_SLOT1_PHYSICAL, STR_DLP_SLOT1_VIRTUAL, STR_DLP_VIRTUAL_SLOT1_EMPTY}, {0, 1, 2});
+	}
 	if (ms().consoleModel == 0 && sdFound() && !sys().arm7SCFGLocked()) {
 		gamesPage.option(STR_DSIWAREBOOTER, STR_DESCRIPTION_DSIWAREBOOTER, Option::Bool((bool *)&ms().dsiWareBooter), {"nds-bootstrap", "Unlaunch"}, {true, false});
 	}

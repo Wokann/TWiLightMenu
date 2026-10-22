@@ -112,7 +112,7 @@ char saveNoDisplay[8];
 
 static int firstPerGameOpShown = 0;
 static int perGameOps = -1;
-static int perGameOp[20] = {-1};
+static int perGameOp[21] = {-1};
 
 bool blacklisted_colorLut = false;
 bool blacklisted_boostCpu = false;
@@ -704,7 +704,7 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 
 	firstPerGameOpShown = 0;
 	perGameOps = -1;
-	for (int i = 0; i < 20; i++) {
+	for (int i = 0; i < 21; i++) {
 		perGameOp[i] = -1;
 	}
 	if (isHomebrew[CURPOS]) {		// Per-game settings for homebrew
@@ -890,6 +890,14 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 				donorRomTextShown = false;
 			}
 		}
+	}
+
+	std::string romPath = ms().romfolder[ms().secondaryDevice];
+	RemoveTrailingSlashes(romPath);
+	romPath += "/" + filename;
+	if (showPerGameSettings && !isNdz[CURPOS] && !isHomebrew[CURPOS] && !isDSiWare[CURPOS]
+	    && !extension(filename, {".argv"}) && memcmp(gameTid[CURPOS], "HND", 3) && memcmp(gameTid[CURPOS], "HNE", 3)) {
+		perGameOp[++perGameOps] = 20;
 	}
 
 	if (isHomebrew[CURPOS] && !largeArm9) {
@@ -1207,6 +1215,10 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 					printSmall(false, perGameOpEndXpos, perGameOpYpos, STR_OFF, endAlign, FontPalette::dialog);
 				}
 				break;
+			case 20:
+				printSmall(false, 0, perGameOpYpos, ms().dlplaySlot1Mode == 1 && ms().dlplayVirtualSlot1RomPath == romPath
+				    ? STR_DLP_CLEAR_VIRTUAL_SLOT1 : STR_DLP_SET_VIRTUAL_SLOT1, Alignment::center, FontPalette::dialog);
+				break;
 		}
 		perGameOpYpos += 14;
 		}
@@ -1439,11 +1451,9 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 								 || arm7size == 0x27280)) {
 							pathDefine = "DONOR20_NDS_PATH"; // SDK2.0
 						}
-						std::string romFolderNoSlash = ms().romfolder[ms().secondaryDevice];
-						RemoveTrailingSlashes(romFolderNoSlash);
 						const char *bootstrapinipath = sys().isRunFromSD() ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC;
 						CIniFile bootstrapini(bootstrapinipath);
-						bootstrapini.SetString("NDS-BOOTSTRAP", pathDefine, romFolderNoSlash+"/"+filename);
+						bootstrapini.SetString("NDS-BOOTSTRAP", pathDefine, romPath);
 						bootstrapini.SaveIniFile(bootstrapinipath);
 						setAsDonorRom = STR_DONE;
 					  }
@@ -1475,9 +1485,7 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 						break;
 					case 15:
 					  if (pressed & KEY_A) {
-						std::string romFolderNoSlash = ms().romfolder[ms().secondaryDevice];
-						RemoveTrailingSlashes(romFolderNoSlash);
-						ms().internetBrowserPath = romFolderNoSlash+"/"+filename;
+						ms().internetBrowserPath = romPath;
 						ms().saveSettings();
 						setAsInternetBrowser = STR_DONE;
 					  }
@@ -1497,6 +1505,13 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 						perGameSettings_dsiWareSlot1Mode++;
 						if (perGameSettings_dsiWareSlot1Mode > 1) perGameSettings_dsiWareSlot1Mode = -1;
 						checkSaves(filenameForInfo, totalRomSize, pubSize, prvSize);
+						break;
+					case 20:
+						if (pressed & KEY_A) {
+							ms().dlplaySlot1Mode = ms().dlplaySlot1Mode == 1 && ms().dlplayVirtualSlot1RomPath == romPath ? 2 : 1;
+							ms().dlplayVirtualSlot1RomPath = ms().dlplaySlot1Mode == 1 ? romPath : "";
+							ms().saveSettings();
+						}
 						break;
 				}
 				(ms().theme == TWLSettings::EThemeSaturn) ? snd().playLaunch() : snd().playSelect();

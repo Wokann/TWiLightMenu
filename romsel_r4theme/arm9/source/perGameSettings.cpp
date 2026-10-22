@@ -95,7 +95,7 @@ char gameTIDText[16];
 
 static int firstPerGameOpShown = 0;
 static int perGameOps = -1;
-static int perGameOp[20] = {-1};
+static int perGameOp[21] = {-1};
 
 bool blacklisted_colorLut = false;
 bool blacklisted_boostCpu = false;
@@ -662,7 +662,7 @@ void perGameSettings (std::string filename) {
 
 	firstPerGameOpShown = 0;
 	perGameOps = -1;
-	for (int i = 0; i < 20; i++) {
+	for (int i = 0; i < 21; i++) {
 		perGameOp[i] = -1;
 	}
 	if (isHomebrew) {		// Per-game settings for homebrew
@@ -827,6 +827,14 @@ void perGameSettings (std::string filename) {
 				donorRomTextShown = false;
 			}
 		}
+	}
+
+	std::string romPath = ms().romfolder[ms().secondaryDevice];
+	RemoveTrailingSlashes(romPath);
+	romPath += "/" + filename;
+	if (showPerGameSettings && !isNdz && !isHomebrew && !isDSiWare
+	    && !extension(filename, {".argv"}) && memcmp(gameTid, "HND", 3) && memcmp(gameTid, "HNE", 3)) {
+		perGameOp[++perGameOps] = 20;
 	}
 
 	if (isHomebrew && !largeArm9) {
@@ -1113,6 +1121,10 @@ void perGameSettings (std::string filename) {
 					printSmall(false, 256-perGameOpXpos, perGameOpYpos, "Off", Alignment::right, highlighted);
 				}
 				break;
+			case 20:
+				printSmall(false, 0, perGameOpYpos, ms().dlplaySlot1Mode == 1 && ms().dlplayVirtualSlot1RomPath == romPath
+				    ? "Clear DLP virtual Slot-1 card" : "Set as DLP virtual Slot-1 card", Alignment::center, highlighted);
+				break;
 		}
 		perGameOpYpos += 12;
 		}
@@ -1337,11 +1349,9 @@ void perGameSettings (std::string filename) {
 								 || arm7size == 0x27280)) {
 							pathDefine = "DONOR20_NDS_PATH"; // SDK2.0
 						}
-						std::string romFolderNoSlash = ms().romfolder[ms().secondaryDevice];
-						RemoveTrailingSlashes(romFolderNoSlash);
 						const char *bootstrapinipath = sys().isRunFromSD() ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC;
 						CIniFile bootstrapini(bootstrapinipath);
-						bootstrapini.SetString("NDS-BOOTSTRAP", pathDefine, romFolderNoSlash+"/"+filename);
+						bootstrapini.SetString("NDS-BOOTSTRAP", pathDefine, romPath);
 						bootstrapini.SaveIniFile(bootstrapinipath);
 						sprintf(SET_AS_DONOR_ROM, "Done!");
 					  }
@@ -1386,6 +1396,13 @@ void perGameSettings (std::string filename) {
 						perGameSettings_dsiWareSlot1Mode++;
 						if (perGameSettings_dsiWareSlot1Mode > 1) perGameSettings_dsiWareSlot1Mode = -1;
 						checkSaves(filenameForInfo, totalRomSize, pubSize, prvSize);
+						break;
+					case 20:
+						if (pressed & KEY_A) {
+							ms().dlplaySlot1Mode = ms().dlplaySlot1Mode == 1 && ms().dlplayVirtualSlot1RomPath == romPath ? 2 : 1;
+							ms().dlplayVirtualSlot1RomPath = ms().dlplaySlot1Mode == 1 ? romPath : "";
+							ms().saveSettings();
+						}
 						break;
 				}
 				perGameSettingsChanged = true;

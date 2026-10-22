@@ -1585,7 +1585,15 @@ int akTheme(void) {
 						fatGetAliasPath(ms().dsiWareBnrPath.c_str(), sfnBnr);
 					}
 
-					const char *bootstrapinipath = sdFound() ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC;
+					bool useNightly = (perGameSettings_bootstrapFile == -1 ? ms().bootstrapFile : perGameSettings_bootstrapFile);
+
+					char ndsToBoot[256];
+					sprintf(ndsToBoot, "sd:/_nds/nds-bootstrap-%s.nds", useNightly ? "nightly" : "release");
+					if (access(ndsToBoot, F_OK) != 0) {
+						sprintf(ndsToBoot, "fat:/_nds/nds-bootstrap-%s.nds", useNightly ? "nightly" : "release");
+					}
+
+					const char *bootstrapinipath = (strncmp(ndsToBoot, "sd:/", 4) == 0 ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC);
 					CIniFile bootstrapini(bootstrapinipath);
 					bootstrapini.SetString("NDS-BOOTSTRAP", "NDS_PATH", ms().secondaryDevice && !bs().b4dsMode && ms().dsiWareToSD && sdFound() ? "sd:/_nds/TWiLightMenu/tempDSiWare.dsi" : ms().dsiWareSrlPath);
 					bootstrapini.SetString("NDS-BOOTSTRAP", "APP_PATH", sfnSrl);
@@ -1630,7 +1638,6 @@ int akTheme(void) {
 					bootstrapini.SaveIniFile(bootstrapinipath);
 					displayDiskIcon(false);
 
-					bool useNightly = (perGameSettings_bootstrapFile == -1 ? ms().bootstrapFile : perGameSettings_bootstrapFile);
 					bool useWidescreen = (perGameSettings_wideScreen == -1 ? ms().wideScreen : perGameSettings_wideScreen);
 
 					if (!isDSiMode() && (!ms().secondaryDevice || (ms().secondaryDevice && ms().dsiWareToSD && sdFound()))) {
@@ -1650,12 +1657,6 @@ int akTheme(void) {
 					}
 
 					writeSoftResetId();
-
-					char ndsToBoot[256];
-					sprintf(ndsToBoot, "sd:/_nds/nds-bootstrap-%s.nds", useNightly ? "nightly" : "release");
-					if (access(ndsToBoot, F_OK) != 0) {
-						sprintf(ndsToBoot, "fat:/_nds/nds-bootstrap-%s.nds", useNightly ? "nightly" : "release");
-					}
 
 					argarray.at(0) = (char *)ndsToBoot;
 					int err = runNdsFile(argarray[0], argarray.size(), (const char **)&argarray[0], sys().isRunFromSD(), true, true, false, true, true, false, -1, 0);
@@ -1907,7 +1908,15 @@ int akTheme(void) {
 						const bool boostCpu = setClockSpeed(phatColors);
 						const bool useWidescreen = (perGameSettings_wideScreen == -1 ? ms().wideScreen : perGameSettings_wideScreen);
 
-						const char *bootstrapinipath = (sys().isRunFromSD() ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC);
+						const bool useNightly = (perGameSettings_bootstrapFile == -1 ? ms().bootstrapFile : perGameSettings_bootstrapFile);
+
+						char ndsToBoot[256];
+						sprintf(ndsToBoot, "%s:/_nds/nds-bootstrap-%s%s.nds", sys().isRunFromSD() ? "sd" : "fat", ms().homebrewBootstrap ? "hb-" : "", useNightly ? "nightly" : "release");
+						if (access(ndsToBoot, F_OK) != 0) {
+							sprintf(ndsToBoot, "%s:/_nds/nds-bootstrap-%s%s.nds", sys().isRunFromSD() ? "fat" : "sd", ms().homebrewBootstrap ? "hb-" : "", useNightly ? "nightly" : "release");
+						}
+
+						const char *bootstrapinipath = ((ms().homebrewBootstrap || strncmp(ndsToBoot, "sd:/", 4) == 0) ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC);
 						CIniFile bootstrapini( bootstrapinipath );
 						bootstrapini.SetString("NDS-BOOTSTRAP", "NDS_PATH", path);
 						bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", savepath);
@@ -2022,14 +2031,6 @@ int akTheme(void) {
 						}
 
 						writeSoftResetId();
-
-						const bool useNightly = (perGameSettings_bootstrapFile == -1 ? ms().bootstrapFile : perGameSettings_bootstrapFile);
-
-						char ndsToBoot[256];
-						sprintf(ndsToBoot, "%s:/_nds/nds-bootstrap-%s%s.nds", sys().isRunFromSD() ? "sd" : "fat", ms().homebrewBootstrap ? "hb-" : "", useNightly ? "nightly" : "release");
-						if (access(ndsToBoot, F_OK) != 0) {
-							sprintf(ndsToBoot, "%s:/_nds/nds-bootstrap-%s%s.nds", sys().isRunFromSD() ? "fat" : "sd", ms().homebrewBootstrap ? "hb-" : "", useNightly ? "nightly" : "release");
-						}
 
 						argarray.at(0) = (char *)ndsToBoot;
 						int err = runNdsFile (argarray[0], argarray.size(), (const char **)&argarray[0], sys().isRunFromSD(), (ms().homebrewBootstrap ? false : true), true, false, true, true, false, -1, 0);
