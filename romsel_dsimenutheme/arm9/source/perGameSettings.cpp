@@ -685,7 +685,7 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 	const bool romLoadableInRam = (romSize <= (unitCode[CURPOS] > 0 ? romSizeLimitTwl : romSizeLimit));
 
 	extern bool dsiWareCompatibleB4DS(void);
-	bool showPerGameSettings = (bnrRomType[CURPOS] == 0 && !isDSiWare[CURPOS]);
+	bool showPerGameSettings = ((bnrRomType[CURPOS] == 1) || (bnrRomType[CURPOS] == 0 && !isDSiWare[CURPOS]));
 	if (bnrRomType[CURPOS] == 0 && (dsiFeatures() || dsiWareCompatibleB4DS() || !ms().secondaryDevice) && !isHomebrew[CURPOS] && isDSiWare[CURPOS]) {
 		showPerGameSettings = true;
 	}
@@ -707,7 +707,9 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 	for (int i = 0; i < 20; i++) {
 		perGameOp[i] = -1;
 	}
-	if (isHomebrew[CURPOS]) {		// Per-game settings for homebrew
+	if (bnrRomType[CURPOS] == 1) {
+		perGameOp[++perGameOps] = 21;	// Virtual Slot-2
+	} else if (isHomebrew[CURPOS]) {		// Per-game settings for homebrew
 		perGameOps++;
 		perGameOp[perGameOps] = 0;	// Language
 		if (isModernHomebrew[CURPOS]) {
@@ -904,7 +906,7 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 	} else if (!isHomebrew[CURPOS]) {
 		snprintf (gameTIDText, sizeof(gameTIDText), gameTid[CURPOS][0]==0 ? "" : "%s-%s-%s", getCodenameString(), gameTid[CURPOS], getRegionString(gameTid[CURPOS][3]));
 
-		if (showPerGameSettings) {
+		if (showPerGameSettings && bnrRomType[CURPOS] == 0) {
 			checkSaves(filenameForInfo, totalRomSize, pubSize, prvSize);
 		}
 	}
@@ -1197,6 +1199,9 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 			case 18:
 				printSmall(false, 0, perGameOpYpos, STR_REMAP_BUTTONS, Alignment::center, FontPalette::dialog);
 				break;
+			case 21:
+				printSmall(false, 0, perGameOpYpos, ms().isVirtualSlot2(filenameForInfo) ? STR_VIRTUAL_SLOT2_SELECTED : STR_VIRTUAL_SLOT2_SELECT, Alignment::center, FontPalette::dialog);
+				break;
 			case 19:
 				printSmall(false, perGameOpStartXpos, perGameOpYpos, STR_SLOT1_MODE + ":", startAlign, FontPalette::dialog);
 				if (perGameSettings_dsiWareSlot1Mode == -1) {
@@ -1353,7 +1358,7 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 						break;
 				}
 				(ms().theme == TWLSettings::EThemeSaturn) ? snd().playLaunch() : snd().playSelect();
-				perGameSettingsChanged = true;
+				perGameSettingsChanged = bnrRomType[CURPOS] == 0;
 			} else if ((pressed & KEY_A) || (held & KEY_RIGHT)) {
 				switch (perGameOp[perGameSettings_cursorPosition]) {
 					case 0:
@@ -1493,6 +1498,12 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 					case 18:
 						if (pressed & KEY_A) remapButtons();
 						break;
+					case 21:
+						if (pressed & KEY_A) {
+							if (ms().toggleVirtualSlot2(filenameForInfo)) snd().playSelect();
+							else snd().playWrong();
+						}
+						continue;
 					case 19:
 						perGameSettings_dsiWareSlot1Mode++;
 						if (perGameSettings_dsiWareSlot1Mode > 1) perGameSettings_dsiWareSlot1Mode = -1;
@@ -1500,7 +1511,7 @@ void perGameSettings (std::string filename, bool* dsiBinariesFound, bool* dsiBin
 						break;
 				}
 				(ms().theme == TWLSettings::EThemeSaturn) ? snd().playLaunch() : snd().playSelect();
-				perGameSettingsChanged = true;
+				perGameSettingsChanged = bnrRomType[CURPOS] == 0;
 			}
 
 			if (pressed & KEY_B) {

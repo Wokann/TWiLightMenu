@@ -1508,6 +1508,17 @@ int settingsMode(void)
 		}
 	}
 	gamesPage.option(STR_DLPLAY_RSA_PATCH, STR_DESCRIPTION_DLPLAY_RSA_PATCH, Option::Bool(&ms().dlplayRsaPatch), {STR_ON, STR_OFF}, {true, false});
+	if (sys().isRegularDS()) {
+		if (ms().virtualSlot2RomPath.empty()) {
+			gamesPage.option(STR_SLOT2_MODE, STR_DESCRIPTION_SLOT2_MODE, Option::Int((int *)&ms().slot2Mode), {STR_SLOT2_PHYSICAL, STR_SLOT2_EMPTY}, {TWLSettings::ESlot2Real, TWLSettings::ESlot2Empty});
+		} else {
+			gamesPage.option(STR_SLOT2_MODE, STR_DESCRIPTION_SLOT2_MODE, Option::Int((int *)&ms().slot2Mode), {STR_SLOT2_PHYSICAL, STR_SLOT2_VIRTUAL, STR_SLOT2_EMPTY}, {TWLSettings::ESlot2Real, TWLSettings::ESlot2Virtual, TWLSettings::ESlot2Empty});
+		}
+	} else if (ms().virtualSlot2RomPath.empty()) {
+		gamesPage.option(STR_SLOT2_MODE, STR_DESCRIPTION_SLOT2_MODE, Option::Int((int *)&ms().slot2Mode), {STR_SLOT2_EMPTY}, {TWLSettings::ESlot2Empty});
+	} else {
+		gamesPage.option(STR_SLOT2_MODE, STR_DESCRIPTION_SLOT2_MODE, Option::Int((int *)&ms().slot2Mode), {STR_SLOT2_VIRTUAL, STR_SLOT2_EMPTY}, {TWLSettings::ESlot2Virtual, TWLSettings::ESlot2Empty});
+	}
 	if (ms().consoleModel == 0 && sdFound() && !sys().arm7SCFGLocked()) {
 		gamesPage.option(STR_DSIWAREBOOTER, STR_DESCRIPTION_DSIWAREBOOTER, Option::Bool((bool *)&ms().dsiWareBooter), {"nds-bootstrap", "Unlaunch"}, {true, false});
 	}

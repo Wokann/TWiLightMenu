@@ -920,9 +920,10 @@ void launchPictochat(const vector<DirEntry>& dirContents) {
 		std::vector<char*> argarray;
 		argarray.push_back(ndsToBoot);
 
-		const char *bootstrapinipath = (sys().isRunFromSD() ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC);
+		const char *bootstrapinipath = (strncmp(ndsToBoot, "fat:/", 5) == 0 ? BOOTSTRAP_INI_FC : BOOTSTRAP_INI);
 		CIniFile bootstrapini(bootstrapinipath);
 		bootstrapini.SetString("NDS-BOOTSTRAP", "NDS_PATH", pictochatPath);
+		ms().writeVirtualSlot2Settings(bootstrapini);
 		bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", "");
 		bootstrapini.SetString("NDS-BOOTSTRAP", "HOMEBREW_ARG", "");
 		bootstrapini.SetString("NDS-BOOTSTRAP", "RAM_DRIVE_PATH", "");
@@ -1093,9 +1094,10 @@ void launchDownloadPlay(const vector<DirEntry>& dirContents) {
 		std::vector<char*> argarray;
 		argarray.push_back(ndsToBoot);
 
-		const char *bootstrapinipath = (sys().isRunFromSD() ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC);
+		const char *bootstrapinipath = (strncmp(ndsToBoot, "fat:/", 5) == 0 ? BOOTSTRAP_INI_FC : BOOTSTRAP_INI);
 		CIniFile bootstrapini(bootstrapinipath);
 		bootstrapini.SetString("NDS-BOOTSTRAP", "NDS_PATH", bootPath);
+		ms().writeVirtualSlot2Settings(bootstrapini);
 		bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", "");
 		bootstrapini.SetString("NDS-BOOTSTRAP", "HOMEBREW_ARG", "");
 		bootstrapini.SetString("NDS-BOOTSTRAP", "RAM_DRIVE_PATH", "");
@@ -1366,9 +1368,10 @@ void launchInternetBrowser(const vector<DirEntry>& dirContents) {
 		std::vector<char*> argarray;
 		argarray.push_back(ndsToBoot);
 
-		const char *bootstrapinipath = (sys().isRunFromSD() ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC);
+		const char *bootstrapinipath = (strncmp(ndsToBoot, "fat:/", 5) == 0 ? BOOTSTRAP_INI_FC : BOOTSTRAP_INI);
 		CIniFile bootstrapini(bootstrapinipath);
 		bootstrapini.SetString("NDS-BOOTSTRAP", "NDS_PATH", ms().internetBrowserPath.c_str());
+		ms().writeVirtualSlot2Settings(bootstrapini);
 		if (NDSHeader.unitCode == 3) {
 			bootstrapini.SetString("NDS-BOOTSTRAP", "APP_PATH", sfnSrl);
 			bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", sfnPub);
@@ -1616,6 +1619,7 @@ void launchGba(void) {
 
 			CIniFile bootstrapini(BOOTSTRAP_INI);
 			bootstrapini.SetString("NDS-BOOTSTRAP", "NDS_PATH", gbar2Path);
+			ms().writeVirtualSlot2Settings(bootstrapini);
 			bootstrapini.SetString("NDS-BOOTSTRAP", "HOMEBREW_ARG", "");
 			bootstrapini.SetString("NDS-BOOTSTRAP", "RAM_DRIVE_PATH", "");
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "LANGUAGE", ms().gameLanguage);

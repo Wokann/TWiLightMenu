@@ -7,6 +7,9 @@
 
 #include <nds/arm9/dldi.h>
 #include <string.h>
+#include <stdio.h>
+#include <limits.h>
+#include <unistd.h>
 
 bool *unlaunchSettingsPtr;
 const char *charUnlaunchBg;
@@ -85,6 +88,7 @@ TWLSettings::TWLSettings()
 	saveLocation = ESavesFolder;
 
 	slot1LaunchMethod = EDirect;
+	slot2Mode = sys().isRegularDS() ? ESlot2Real : ESlot2Empty;
 
 	dsiSplash = isDSiMode();
 	oppositeSplash = false;
@@ -284,6 +288,16 @@ void TWLSettings::loadSettings()
 	settingsini.GetStringVector("SRLOADER", "BLOCKED_EXTENSIONS", blockedExtensions, ':');
 
 	slot1LaunchMethod = (TSlot1LaunchMethod)settingsini.GetInt("SRLOADER", "SLOT1_LAUNCHMETHOD", slot1LaunchMethod);
+	virtualSlot2RomPath = settingsini.GetString("SRLOADER", "VIRTUAL_SLOT2_ROM_PATH", "");
+	virtualSlot2SavPath = settingsini.GetString("SRLOADER", "VIRTUAL_SLOT2_SAV_PATH", "");
+	virtualSlot2SaveType = settingsini.GetInt("SRLOADER", "VIRTUAL_SLOT2_SAVE_TYPE", 0);
+	virtualSlot2SaveWrite = settingsini.GetInt("SRLOADER", "VIRTUAL_SLOT2_SAVE_WRITE", 1);
+	slot2Mode = (TSlot2Mode)settingsini.GetInt("SRLOADER", "SLOT2_MODE", virtualSlot2RomPath.empty() ? slot2Mode : ESlot2Virtual);
+	if ((slot2Mode != ESlot2Real && slot2Mode != ESlot2Virtual && slot2Mode != ESlot2Empty)
+	 || (!sys().isRegularDS() && slot2Mode == ESlot2Real))
+		slot2Mode = virtualSlot2RomPath.empty() ? ESlot2Empty : ESlot2Virtual;
+	if (slot2Mode == ESlot2Virtual && virtualSlot2RomPath.empty())
+		slot2Mode = ESlot2Empty;
 
 	dsiSplash = settingsini.GetInt("SRLOADER", "DSI_SPLASH", dsiSplash);
 	oppositeSplash = settingsini.GetInt("SRLOADER", "OPPOSITE_SPLASH", oppositeSplash);
@@ -472,6 +486,11 @@ void TWLSettings::saveSettings()
 	settingsini.SetInt("SRLOADER", "SAVE_LOCATION", saveLocation);
 
 	settingsini.SetInt("SRLOADER", "SLOT1_LAUNCHMETHOD", slot1LaunchMethod);
+	settingsini.SetInt("SRLOADER", "SLOT2_MODE", slot2Mode);
+	settingsini.SetString("SRLOADER", "VIRTUAL_SLOT2_ROM_PATH", virtualSlot2RomPath);
+	settingsini.SetString("SRLOADER", "VIRTUAL_SLOT2_SAV_PATH", virtualSlot2SavPath);
+	settingsini.SetInt("SRLOADER", "VIRTUAL_SLOT2_SAVE_TYPE", virtualSlot2SaveType);
+	settingsini.SetInt("SRLOADER", "VIRTUAL_SLOT2_SAVE_WRITE", virtualSlot2SaveWrite);
 
 	settingsini.SetInt("SRLOADER", "DSI_SPLASH", dsiSplash);
 	settingsini.SetInt("SRLOADER", "DSI_SPLASH_EASTER_EGGS", dsiSplashEasterEggs);
@@ -684,4 +703,72 @@ TWLSettings::TRegion TWLSettings::getGameRegion()
 		return ERegionUSA;
 	}
 	return (TRegion)gameRegion;
+}
+
+static std::string getSlot2Path(const std::string& filename)
+{
+	if (filename.compare(0, 4, "sd:/") == 0 || filename.compare(0, 5, "fat:/") == 0)
+		return filename;
+	char cwd[PATH_MAX];
+	if (!getcwd(cwd, sizeof(cwd)))
+		return "";
+	std::string dir(cwd);
+	if (!dir.empty() && dir.back() != '/')
+		dir += '/';
+	return dir + filename;
+}
+
+bool TWLSettings::isVirtualSlot2(const std::string& filename) const
+{
+	const std::string path = getSlot2Path(filename);
+	return slot2Mode == ESlot2Virtual && !path.empty() && path == virtualSlot2RomPath;
+}
+
+bool TWLSettings::toggleVirtualSlot2(const std::string& filename)
+{
+	const std::string path = getSlot2Path(filename);
+	if (path.empty())
+		return false;
+	if (slot2Mode == ESlot2Virtual && path == virtualSlot2RomPath) {
+		virtualSlot2RomPath.clear();
+		virtualSlot2SavPath.clear();
+		slot2Mode = ESlot2Empty;
+	} else {
+		FILE* rom = fopen(path.c_str(), "rb");
+		if (!rom)
+			return false;
+		unsigned char header[0xC0];
+		const size_t got = fread(header, 1, sizeof(header), rom);
+		fclose(rom);
+		if (got != sizeof(header) || header[0xB2] != 0x96)
+			return false;
+		const size_t dot = path.find_last_of('.');
+		if (dot == std::string::npos)
+			return false;
+		std::string save = path.substr(0, dot) + ".sav";
+		virtualSlot2RomPath = path;
+		virtualSlot2SavPath = save;
+		virtualSlot2SaveType = 0;
+		slot2Mode = ESlot2Virtual;
+	}
+	saveSettings();
+	return true;
+}
+
+void TWLSettings::writeVirtualSlot2Settings(CIniFile& bootstrapini) const
+{
+	const bool useVirtualSlot2 = slot2Mode != ESlot2Real || !sys().isRegularDS();
+	const bool useVirtualSlot2Rom = useVirtualSlot2 && slot2Mode != ESlot2Empty && !virtualSlot2RomPath.empty();
+	std::string save = virtualSlot2SavPath;
+	if (save.empty()) {
+		const size_t dot = virtualSlot2RomPath.find_last_of('.');
+		if (dot != std::string::npos)
+			save = virtualSlot2RomPath.substr(0, dot) + ".sav";
+	}
+	/* Always replace the previous launch's values, including when disabled. */
+	bootstrapini.SetString("NDS-BOOTSTRAP", "VIRTUAL_SLOT2_ROM_PATH", useVirtualSlot2Rom ? virtualSlot2RomPath : "");
+	bootstrapini.SetString("NDS-BOOTSTRAP", "VIRTUAL_SLOT2_SAV_PATH", useVirtualSlot2Rom ? save : "");
+	bootstrapini.SetInt("NDS-BOOTSTRAP", "VIRTUAL_SLOT2_EMPTY", useVirtualSlot2 && !useVirtualSlot2Rom);
+	bootstrapini.SetInt("NDS-BOOTSTRAP", "VIRTUAL_SLOT2_SAVE_TYPE", virtualSlot2SaveType);
+	bootstrapini.SetInt("NDS-BOOTSTRAP", "VIRTUAL_SLOT2_SAVE_WRITE", virtualSlot2SaveWrite);
 }

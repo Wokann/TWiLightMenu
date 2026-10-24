@@ -203,6 +203,7 @@ void applyLaunchSideEffects(const LaunchPlan &plan, const GbaNativeUi *gbaNative
 		bootstrapini.SetInt("NDS-BOOTSTRAP", "LANGUAGE", ms().gameLanguage);
 		bootstrapini.SetInt("NDS-BOOTSTRAP", "DSI_MODE", plan.dsiMode);
 		bootstrapini.SetString("NDS-BOOTSTRAP", "NDS_PATH", plan.ndsToBoot);
+		ms().writeVirtualSlot2Settings(bootstrapini);
 		bootstrapini.SetString("NDS-BOOTSTRAP", "HOMEBREW_ARG", plan.bootstrapHomebrewArg);
 		bootstrapini.SetInt("NDS-BOOTSTRAP", "BOOST_CPU", plan.bootstrapBoostCpu);
 		bootstrapini.SetInt("NDS-BOOTSTRAP", "BOOST_VRAM", 0);

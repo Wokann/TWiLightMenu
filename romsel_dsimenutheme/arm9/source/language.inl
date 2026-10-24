@@ -153,6 +153,8 @@ STRING(NEXT_R, "Next Page \\R")
 STRING(NEXT, "Next")
 
 // Per-game settings
+STRING(VIRTUAL_SLOT2_SELECT, "Set as virtual Slot-2 card")
+STRING(VIRTUAL_SLOT2_SELECTED, "Clear virtual Slot-2 card")
 STRING(SDK_VER, "SDK ver: %s")
 STRING(DS_PHAT_COLORS, "DS Phat Colors")
 STRING(LANGUAGE, "Language")

@@ -14,6 +14,8 @@
  * 
  * Try not to change settings that are not related to the current theme.
  */
+class CIniFile;
+
 class TWLSettings
 {
 public:
@@ -97,6 +99,13 @@ public:
 		EReboot = 0,
 		EDirect = 1,
 		EUnlaunch = 2
+	};
+
+	enum TSlot2Mode : int
+	{
+		ESlot2Real = 0,
+		ESlot2Virtual = 1,
+		ESlot2Empty = 2
 	};
 
 	enum TFCGameLoader : int
@@ -258,6 +267,9 @@ public:
 public:
 	void loadSettings();
 	void saveSettings();
+	bool isVirtualSlot2(const std::string &filename) const;
+	bool toggleVirtualSlot2(const std::string &filename);
+	void writeVirtualSlot2Settings(CIniFile &bootstrapini) const;
 
 	TLanguage getGuiLanguage();
 	TLanguage getGameLanguage();
@@ -333,6 +345,11 @@ public:
 	std::vector<std::string> blockedExtensions;
 
 	TSlot1LaunchMethod slot1LaunchMethod;
+	TSlot2Mode slot2Mode;
+	std::string virtualSlot2RomPath;
+	std::string virtualSlot2SavPath;
+	int virtualSlot2SaveType = 0;
+	bool virtualSlot2SaveWrite = true;
 
 	int dsiSplash;
 	bool oppositeSplash;

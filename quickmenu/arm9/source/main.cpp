@@ -1935,9 +1935,10 @@ int dsClassicMenu(void) {
 								char pictochatFullPath[sizeof(pictochatPath) + 4];
 								snprintf(pictochatFullPath, sizeof(pictochatFullPath), "%s:%s", sys().isRunFromSD() ? "sd" : "fat", pictochatPath);
 
-								const char *bootstrapinipath = (sys().isRunFromSD() ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC);
+								const char *bootstrapinipath = (strncmp(ndsToBoot, "fat:/", 5) == 0 ? BOOTSTRAP_INI_FC : BOOTSTRAP_INI);
 								CIniFile bootstrapini(bootstrapinipath);
 								bootstrapini.SetString("NDS-BOOTSTRAP", "NDS_PATH", pictochatFullPath);
+								ms().writeVirtualSlot2Settings(bootstrapini);
 								bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", "");
 								bootstrapini.SetString("NDS-BOOTSTRAP", "HOMEBREW_ARG", "");
 								bootstrapini.SetString("NDS-BOOTSTRAP", "RAM_DRIVE_PATH", "");
@@ -2058,9 +2059,10 @@ int dsClassicMenu(void) {
 								std::vector<char*> argarray;
 								argarray.push_back(ndsToBoot);
 
-								const char *bootstrapinipath = (sys().isRunFromSD() ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC);
+								const char *bootstrapinipath = (strncmp(ndsToBoot, "fat:/", 5) == 0 ? BOOTSTRAP_INI_FC : BOOTSTRAP_INI);
 								CIniFile bootstrapini(bootstrapinipath);
 								bootstrapini.SetString("NDS-BOOTSTRAP", "NDS_PATH", bootPath);
+								ms().writeVirtualSlot2Settings(bootstrapini);
 								bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", "");
 								bootstrapini.SetString("NDS-BOOTSTRAP", "HOMEBREW_ARG", "");
 								bootstrapini.SetString("NDS-BOOTSTRAP", "RAM_DRIVE_PATH", "");
@@ -2553,6 +2555,7 @@ int dsClassicMenu(void) {
 					const char *bootstrapinipath = sdFound() ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC;
 					CIniFile bootstrapini(bootstrapinipath);
 					bootstrapini.SetString("NDS-BOOTSTRAP", "NDS_PATH", ms().secondaryDevice && !bs().b4dsMode && ms().dsiWareToSD && sdFound() ? "sd:/_nds/TWiLightMenu/tempDSiWare.dsi" : ms().dsiWareSrlPath);
+					ms().writeVirtualSlot2Settings(bootstrapini);
 					bootstrapini.SetString("NDS-BOOTSTRAP", "APP_PATH", sfnSrl);
 					bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", sfnPub);
 					bootstrapini.SetString("NDS-BOOTSTRAP", "PRV_PATH", sfnPrv);
@@ -2880,9 +2883,18 @@ int dsClassicMenu(void) {
 						const bool boostCpu = setClockSpeed(phatColors);
 						const bool useWidescreen = (perGameSettings_wideScreen == -1 ? ms().wideScreen : perGameSettings_wideScreen);
 
-						const char *bootstrapinipath = (sys().isRunFromSD() ? BOOTSTRAP_INI : BOOTSTRAP_INI_FC);
+						const bool useNightly = (perGameSettings_bootstrapFile == -1 ? ms().bootstrapFile : perGameSettings_bootstrapFile);
+
+						char ndsToBoot[256];
+						sprintf(ndsToBoot, "%s:/_nds/nds-bootstrap-%s%s.nds", sys().isRunFromSD() ? "sd" : "fat", ms().homebrewBootstrap ? "hb-" : "", useNightly ? "nightly" : "release");
+						if (access(ndsToBoot, F_OK) != 0) {
+							sprintf(ndsToBoot, "%s:/_nds/nds-bootstrap-%s%s.nds", sys().isRunFromSD() ? "fat" : "sd", ms().homebrewBootstrap ? "hb-" : "", useNightly ? "nightly" : "release");
+						}
+
+						const char *bootstrapinipath = (strncmp(ndsToBoot, "fat:/", 5) == 0 ? BOOTSTRAP_INI_FC : BOOTSTRAP_INI);
 						CIniFile bootstrapini(bootstrapinipath);
 						bootstrapini.SetString("NDS-BOOTSTRAP", "NDS_PATH", path);
+						ms().writeVirtualSlot2Settings(bootstrapini);
 						bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", savepath);
 						if (!isHomebrew[ms().secondaryDevice]) {
 							bootstrapini.SetString("NDS-BOOTSTRAP", "MANUAL_PATH", getGameManual(filename[ms().secondaryDevice].c_str()));
@@ -2973,14 +2985,6 @@ int dsClassicMenu(void) {
 
 						if (sdFound() && ms().homebrewBootstrap && (access("sd:/moonshl2/logbuf.txt", F_OK) == 0)) {
 							remove("sd:/moonshl2/logbuf.txt"); // Delete file for Moonshell 2 to boot properly
-						}
-
-						const bool useNightly = (perGameSettings_bootstrapFile == -1 ? ms().bootstrapFile : perGameSettings_bootstrapFile);
-
-						char ndsToBoot[256];
-						sprintf(ndsToBoot, "%s:/_nds/nds-bootstrap-%s%s.nds", sys().isRunFromSD() ? "sd" : "fat", ms().homebrewBootstrap ? "hb-" : "", useNightly ? "nightly" : "release");
-						if (access(ndsToBoot, F_OK) != 0) {
-							sprintf(ndsToBoot, "%s:/_nds/nds-bootstrap-%s%s.nds", sys().isRunFromSD() ? "fat" : "sd", ms().homebrewBootstrap ? "hb-" : "", useNightly ? "nightly" : "release");
 						}
 
 						if (ms().btsrpBootloaderDirect && isHomebrew[ms().secondaryDevice]) {
