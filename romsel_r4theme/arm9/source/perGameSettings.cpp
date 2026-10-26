@@ -832,7 +832,7 @@ void perGameSettings (std::string filename) {
 	std::string romPath = ms().romfolder[ms().secondaryDevice];
 	RemoveTrailingSlashes(romPath);
 	romPath += "/" + filename;
-	if (showPerGameSettings && !isNdz && !isHomebrew && !isDSiWare
+	if (ms().dlplaySlot1Mode != 0 && showPerGameSettings && !isNdz && !isHomebrew && !isDSiWare
 	    && !extension(filename, {".argv"}) && memcmp(gameTid, "HND", 3) && memcmp(gameTid, "HNE", 3)) {
 		perGameOp[++perGameOps] = 20;
 	}
