@@ -718,10 +718,19 @@ static std::string getSlot2Path(const std::string& filename)
 	return dir + filename;
 }
 
+static std::string getSlot2SavePath(const std::string& path)
+{
+	const size_t dot = path.find_last_of('.');
+	const size_t slash = path.find_last_of('/');
+	return path.substr(0, dot != std::string::npos && (slash == std::string::npos || dot > slash) ? dot : path.size()) + ".sav";
+}
+
 bool TWLSettings::isVirtualSlot2(const std::string& filename) const
 {
+	if (slot2Mode != ESlot2Virtual || virtualSlot2RomPath.empty())
+		return false;
 	const std::string path = getSlot2Path(filename);
-	return slot2Mode == ESlot2Virtual && !path.empty() && path == virtualSlot2RomPath;
+	return !path.empty() && path == virtualSlot2RomPath;
 }
 
 bool TWLSettings::toggleVirtualSlot2(const std::string& filename)
@@ -742,12 +751,8 @@ bool TWLSettings::toggleVirtualSlot2(const std::string& filename)
 		fclose(rom);
 		if (got != sizeof(header) || header[0xB2] != 0x96)
 			return false;
-		const size_t dot = path.find_last_of('.');
-		if (dot == std::string::npos)
-			return false;
-		std::string save = path.substr(0, dot) + ".sav";
 		virtualSlot2RomPath = path;
-		virtualSlot2SavPath = save;
+		virtualSlot2SavPath = getSlot2SavePath(path);
 		virtualSlot2SaveType = 0;
 		slot2Mode = ESlot2Virtual;
 	}
@@ -760,11 +765,8 @@ void TWLSettings::writeVirtualSlot2Settings(CIniFile& bootstrapini) const
 	const bool useVirtualSlot2 = slot2Mode != ESlot2Real || !sys().isRegularDS();
 	const bool useVirtualSlot2Rom = useVirtualSlot2 && slot2Mode != ESlot2Empty && !virtualSlot2RomPath.empty();
 	std::string save = virtualSlot2SavPath;
-	if (save.empty()) {
-		const size_t dot = virtualSlot2RomPath.find_last_of('.');
-		if (dot != std::string::npos)
-			save = virtualSlot2RomPath.substr(0, dot) + ".sav";
-	}
+	if (useVirtualSlot2Rom && save.empty())
+		save = getSlot2SavePath(virtualSlot2RomPath);
 	/* Always replace the previous launch's values, including when disabled. */
 	bootstrapini.SetString("NDS-BOOTSTRAP", "VIRTUAL_SLOT2_ROM_PATH", useVirtualSlot2Rom ? virtualSlot2RomPath : "");
 	bootstrapini.SetString("NDS-BOOTSTRAP", "VIRTUAL_SLOT2_SAV_PATH", useVirtualSlot2Rom ? save : "");
